@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_gallery_saver/image_gallery_saver.dart';
 
 class PhotoCapturePage extends StatefulWidget {
   @override
@@ -34,9 +35,43 @@ class _PhotoCapturePageState extends State<PhotoCapturePage> {
     try {
       await _initializeControllerFuture;
       final image = await _controller!.takePicture();
-      await _sendPhotoToServer(image.path);
+
+      // Uložení snímku do galerie
+      final result = await ImageGallerySaver.saveFile(image.path);
+
+      if (result['isSuccess']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Photo saved to gallery')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save photo')),
+        );
+      }
     } catch (e) {
-      print(e);
+      print('Error taking photo: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error taking photo')),
+      );
+    }
+  }
+
+  Future<void> _selectAndSendPhoto() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      try {
+        await _sendPhotoToServer(pickedFile.path);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Photo sent successfully')),
+        );
+      } catch (e) {
+        print('Error sending photo: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error sending photo')),
+        );
+      }
     }
   }
 
@@ -64,7 +99,7 @@ class _PhotoCapturePageState extends State<PhotoCapturePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Alfons fotografie')),
+      appBar: AppBar(title: Text('Photo Capture')),
       body: _initializeControllerFuture == null
           ? Center(child: CircularProgressIndicator())
           : FutureBuilder<void>(
@@ -77,17 +112,17 @@ class _PhotoCapturePageState extends State<PhotoCapturePage> {
                 }
               },
             ),
-      floatingActionButton: Row(
+      floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           FloatingActionButton(
             onPressed: _takePhoto,
             child: Icon(Icons.camera),
           ),
-          SizedBox(width: 16),
+          SizedBox(height: 16),
           FloatingActionButton(
-            onPressed: _pickPhoto,
-            child: Icon(Icons.photo_library),
+            onPressed: _selectAndSendPhoto,
+            child: Icon(Icons.send),
           ),
         ],
       ),
