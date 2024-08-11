@@ -30,14 +30,19 @@ class _PhotoCapturePageState extends State<PhotoCapturePage> {
 
   Future<void> _takePhoto() async {
     if (_controller == null || !_controller!.value.isInitialized) {
+      print('Camera controller not initialized');
       return;
     }
     try {
       await _initializeControllerFuture;
       final image = await _controller!.takePicture();
 
+      print('Photo taken, path: ${image.path}');
+
       // Uložení snímku do galerie
       final result = await ImageGallerySaver.saveFile(image.path);
+
+      print('Save result: $result');
 
       if (result['isSuccess']) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -45,13 +50,14 @@ class _PhotoCapturePageState extends State<PhotoCapturePage> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save photo')),
+          SnackBar(
+              content: Text('Failed to save photo: ${result['errorMessage']}')),
         );
       }
     } catch (e) {
       print('Error taking photo: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error taking photo')),
+        SnackBar(content: Text('Error taking photo: $e')),
       );
     }
   }
